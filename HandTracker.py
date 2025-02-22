@@ -28,8 +28,8 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     indexy = 0
   else:
     detected_gesture = top_gesture[0][0].category_name
-    indexx = hand_landmarks_list[0][8].x
-    indexy = hand_landmarks_list[0][8].y
+    indexx = hand_landmarks_list[0][0].x
+    indexy = hand_landmarks_list[0][0].y
   annotated_image = np.copy(rgb_image)
 
   """# Loop through the detected hands to visualize.
@@ -75,35 +75,53 @@ base_options_gestures = python.BaseOptions(model_asset_path='gesture_recognizer.
 optionsGestures = vision.GestureRecognizerOptions(base_options=base_options_gestures)
 recognizer = vision.GestureRecognizer.create_from_options(optionsGestures)
 
+def getFrame():
+  ret, frame = cap.read()
+  frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+  rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+  detection_result = recognizer.recognize(rgb_frame)
+  return (rgb_frame, detection_result)
 # STEP 4: Detect hand landmarks from the input image.
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
+xhistory = []
+yhistory = []
 while True:
-    # Capture frame-by-frame
-    ret, frame = cap.read()
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-
-    detection_result = recognizer.recognize(rgb_frame)
-    
-    #detection_result = detector.detect(rgb_frame)
-    (annotated_image, detected_gesture, x, y) = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
-    #cv2.imshow("hi", cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
+  rgb_frame, detection_result = getFrame()
+  
+  #detection_result = detector.detect(rgb_frame)
+  (annotated_image, detected_gesture, x, y) = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
+  #cv2.imshow("hi", cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
    
-   #Mouse Movement (it scared of you. stop it)
-    if detected_gesture == "Pointing_Up":
-      xmouse = math.floor((1-x) * 1536)
-      ymouse = math.floor(y * 864)
-      mouse.move(xmouse,ymouse, absolute = True)
+  #Mouse Movement (it scared of you. stop it)
+  x = np.interp(x, (0.3, 0.7), (0, 1))
+  y = np.interp(y, (0.3, 0.7), (0, 1))
+  xhistory.append(x)
+  yhistory.append(y)
+  size = 10
+  if len(xhistory) >= size:
+    xhistory.pop(0)
+  if len(yhistory) >= size:
+    yhistory.pop(0)
+  x = np.mean(xhistory)
+  y = np.mean(yhistory)
+  
 
-   #Left Click
-    if detected_gesture == "Open_Palm":
-      mouse.click('left')
-      time.sleep(1)
-    
-    
-    if detected_gesture == "Thumb_Up":
-      break
-
+  xmouse = math.floor((1-x) * 1536)
+  ymouse = math.floor(y * 864)
+  mouse.move(xmouse,ymouse, absolute = True)
+  #Left Click
+  if detected_gesture == "Open_Palm":
+    mouse.double_click('left')
+    while detected_gesture == "Open_Palm":
+      rgb_frame, detection_result = getFrame()
+      (annotated_image, detected_gesture, x, y) = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
+  if detected_gesture == "Victory":
+    mouse.click('left')
+    while detected_gesture == "Victory":
+      rgb_frame, detection_result = getFrame()
+      (annotated_image, detected_gesture, x, y) = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
+  if detected_gesture == "Thumb_Up":
+    break
