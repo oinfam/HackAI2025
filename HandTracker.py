@@ -7,6 +7,8 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks.python import vision
 import cv2
 import math
+import mouse
+import time
 
 MARGIN = 10  # pixels
 FONT_SIZE = 1
@@ -19,14 +21,18 @@ def draw_landmarks_on_image(rgb_image, detection_result):
   hand_landmarks_list = detection_result.hand_landmarks
   handedness_list = detection_result.handedness
   top_gesture = detection_result.gestures
-  detected_gesture = top_gesture[0][0].category_name
   if np.size(handedness_list) == 0:
     print("No Hand Detected")
+    detected_gesture = "No Hand"
+    indexx = 0
+    indexy = 0
   else:
-    print(detected_gesture)
+    detected_gesture = top_gesture[0][0].category_name
+    indexx = hand_landmarks_list[0][8].x
+    indexy = hand_landmarks_list[0][8].y
   annotated_image = np.copy(rgb_image)
 
-  # Loop through the detected hands to visualize.
+  """# Loop through the detected hands to visualize.
   for idx in range(len(hand_landmarks_list)):
     hand_landmarks = hand_landmarks_list[idx]
     handedness = handedness_list[idx]
@@ -53,9 +59,10 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     # Draw handedness (left or right hand) on the image.
     cv2.putText(annotated_image, f"{handedness[0].category_name}",
                 (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
-                FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)
+                FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)"""
 
-  return annotated_image
+  return(1, detected_gesture, indexx, indexy)
+  #return (annotated_image, detected_gesture,indexx,indexy)
 
 
 # STEP 2: Create an HandLandmarker object.
@@ -82,9 +89,21 @@ while True:
     detection_result = recognizer.recognize(rgb_frame)
     
     #detection_result = detector.detect(rgb_frame)
-    annotated_image = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
-    cv2.imshow("hi", cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
-    if cv2.waitKey(1) == ord('q'):
-        break
-cv2.destroyAllWindows()
+    (annotated_image, detected_gesture, x, y) = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
+    #cv2.imshow("hi", cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
+   
+   #Mouse Movement (it scared of you. stop it)
+    if detected_gesture == "Pointing_Up":
+      xmouse = math.floor((1-x) * 1536)
+      ymouse = math.floor(y * 864)
+      mouse.move(xmouse,ymouse, absolute = True)
+
+   #Left Click
+    if detected_gesture == "Open_Palm":
+      mouse.click('left')
+      time.sleep(1)
+    
+    
+    if detected_gesture == "Thumb_Up":
+      break
 
