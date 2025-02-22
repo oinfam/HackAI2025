@@ -19,7 +19,11 @@ def draw_landmarks_on_image(rgb_image, detection_result):
   hand_landmarks_list = detection_result.hand_landmarks
   handedness_list = detection_result.handedness
   top_gesture = detection_result.gestures
-  print(np.array(top_gesture)[0])
+  detected_gesture = top_gesture[0][0].category_name
+  if np.size(handedness_list) == 0:
+    print("No Hand Detected")
+  else:
+    print(detected_gesture)
   annotated_image = np.copy(rgb_image)
 
   # Loop through the detected hands to visualize.
